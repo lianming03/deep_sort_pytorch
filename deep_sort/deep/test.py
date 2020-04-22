@@ -9,6 +9,7 @@ from model import Net
 
 parser = argparse.ArgumentParser(description="Train on market1501")
 parser.add_argument("--data-dir",default='data',type=str)
+parser.add_argument("--num-classes",default=751,type=int)
 parser.add_argument("--no-cuda",action="store_true")
 parser.add_argument("--gpu-id",default=0,type=int)
 args = parser.parse_args()
@@ -37,7 +38,8 @@ galleryloader = torch.utils.data.DataLoader(
 )
 
 # net definition
-net = Net(reid=True)
+num_classes = args.num_classes
+net = Net(num_classes=num_classes, reid=True)
 assert os.path.isfile("./checkpoint/ckpt.t7"), "Error: no checkpoint file found!"
 print('Loading from checkpoint/ckpt.t7')
 checkpoint = torch.load("./checkpoint/ckpt.t7")
