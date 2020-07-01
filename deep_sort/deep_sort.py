@@ -6,20 +6,28 @@ from .sort.nn_matching import NearestNeighborDistanceMetric
 from .sort.preprocessing import non_max_suppression
 from .sort.detection import Detection
 from .sort.tracker import Tracker
-
+from torchreid.utils import FeatureExtractor
 
 __all__ = ['DeepSort']
 
 
 class DeepSort(object):
-    def __init__(self, model_path, num_classes=751, max_dist=0.2, min_confidence=0.3, nms_max_overlap=1.0, max_iou_distance=0.7, max_age=70, n_init=3, nn_budget=100, use_cuda=True):
+    def __init__(self, model_path,model_name, max_dist=0.2, min_confidence=0.3, nms_max_overlap=1.0, max_iou_distance=0.7, max_age=70, n_init=1, nn_budget=100, use_cuda=True):
         self.min_confidence = min_confidence
         self.nms_max_overlap = nms_max_overlap
 
-        self.extractor = Extractor(model_path,num_classes=num_classes, use_cuda=use_cuda)
+        self.extractor = None
+        if model_name == "osnet_x1_0":
+            self.extractor = FeatureExtractor(
+                    model_name= model_name,
+                    model_path = model_path,
+                    device="cuda"
+            )
+        else:
+            self.extractor =  Extractor(model_path, use_cuda=use_cuda)
 
         max_cosine_distance = max_dist
-        nn_budget = 100
+        nn_budget = nn_budget
         metric = NearestNeighborDistanceMetric("cosine", max_cosine_distance, nn_budget)
         self.tracker = Tracker(metric, max_iou_distance=max_iou_distance, max_age=max_age, n_init=n_init)
 
@@ -90,15 +98,6 @@ class DeepSort(object):
         y1 = max(int(y),0)
         y2 = min(int(y+h),self.height-1)
         return x1,y1,x2,y2
-
-    def _xyxy_to_tlwh(self, bbox_xyxy):
-        x1,y1,x2,y2 = bbox_xyxy
-
-        t = x1
-        l = y1
-        w = int(x2-x1)
-        h = int(y2-y1)
-        return t,l,w,h
     
     def _get_features(self, bbox_xywh, ori_img):
         im_crops = []
@@ -108,8 +107,8 @@ class DeepSort(object):
             im_crops.append(im)
         if im_crops:
             features = self.extractor(im_crops)
+            if isinstance(features,torch.Tensor):
+                features = features.to("cpu").numpy()
         else:
             features = np.array([])
         return features
-
-
